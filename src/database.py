@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-from redis import Redis
+from redis.asyncio import Redis
 
 
 redis_conn = Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
