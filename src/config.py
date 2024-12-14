@@ -23,6 +23,7 @@ DB_TEST_PORT: int = os.getenv("DB_TEST_PORT", default=5433)
 DB_TEST_HOST: str = os.getenv("DB_TEST_HOST", default="0.0.0.0")
 DB_TEST_NAME: str = os.getenv("POSTGRES_DB_TEST", default="db_test")
 
+DATABASE_TEST_ASYNC_URL: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_TEST_USER}:{POSTGRES_TEST_PASSWORD}@{DB_TEST_HOST}:{DB_TEST_PORT}/{DB_TEST_NAME}"
 DATABASE_TEST_SYNC_URL: PostgresDsn = f"postgresql://{POSTGRES_TEST_USER}:{POSTGRES_TEST_PASSWORD}@{DB_TEST_HOST}:{DB_TEST_PORT}/{DB_TEST_NAME}"
 
 REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")

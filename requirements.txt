@@ -8,7 +8,7 @@ sqlalchemy[asyncio]
 psycopg2-binary
 pytest
 fastapi
-httpx
+httpx==0.27.1
 uvicorn
 pytest-asyncio
 python-jose==3.3.0

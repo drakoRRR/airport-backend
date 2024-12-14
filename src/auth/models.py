@@ -21,10 +21,10 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    full_name = Column(String, nullable=False)
-    birth_date = Column(Date, nullable=False)
-    passport_data = Column(String, nullable=False)
-    phone_number = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    birth_date = Column(Date, nullable=True)
+    passport_data = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     card_number = Column(String, nullable=True)
 
     bookings = relationship("Booking", back_populates="client")
