@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, String, func, select
+from sqlalchemy import Boolean, Column, DateTime, String, func, select, Date
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +20,14 @@ class User(Base):
     is_superuser = Column(Boolean(), default=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    full_name = Column(String, nullable=False)
+    birth_date = Column(Date, nullable=False)
+    passport_data = Column(String, nullable=False)
+    phone_number = Column(String, nullable=False)
+    card_number = Column(String, nullable=True)
+
+    bookings = relationship("Booking", back_populates="client")
 
 
 class TokenBlacklist(Base):

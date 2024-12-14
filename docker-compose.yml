@@ -58,7 +58,7 @@ services:
     platform: linux/amd64
 
   redis:
-    container_name: "redis"
+    container_name: "redis_airport"
     image: "redis:alpine"
     ports:
       - "6379:6379"
@@ -79,3 +79,4 @@ services:
 volumes:
   dev-db:
   db_test:
+  mongo_data:

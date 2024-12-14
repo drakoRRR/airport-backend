@@ -18,3 +18,5 @@ bcrypt==3.2.0
 pydantic[email]
 python-multipart
 redis
+pymongo
+bson

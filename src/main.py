@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import DEBUG
 from src.auth.routers import auth_router
+from src.bookings.routers import booking_router
+from src.tours.routers import tours_router
 
 
 load_dotenv()
@@ -32,6 +34,8 @@ fastapi_app = create_app()
 
 main_api_router = APIRouter()
 fastapi_app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+fastapi_app.include_router(tours_router, prefix="/tours", tags=["Tours"])
+fastapi_app.include_router(booking_router, prefix="/bookings", tags=["Bookings"])
 fastapi_app.include_router(main_api_router)
 
 

@@ -22,6 +22,8 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 from src.database import Base
 from src.auth.models import User, TokenBlacklist
+from src.tours.models import Tour
+from src.bookings.models import Booking
 target_metadata = Base.metadata
 
 from src.config import DATABASE_URL
