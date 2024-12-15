@@ -24,11 +24,11 @@ async def create_test_user(session: AsyncSession):
         user_name=USER_NAME,
         email=EMAIL,
         hashed_password=hashed_password,
-        full_name="John Doe",
-        birth_date=datetime.date(1900, 1, 1),
-        passport_data="10203021321",
-        phone_number="1234567890",
-        card_number="3282881902321325"
+        # full_name="John Doe",
+        # birth_date=datetime.date(1900, 1, 1),
+        # passport_data="10203021321",
+        # phone_number="1234567890",
+        # card_number="3282881902321325"
     )
     session.add(test_user)
     await session.commit()

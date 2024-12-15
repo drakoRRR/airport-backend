@@ -1,78 +1,112 @@
 import json
-
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.database import get_db, redis_client
 from src.tours.repo import TourRepository
 from src.config import CACHE_EXPIRATION
+from src.auth.services import get_current_user
+from src.auth.models import User
 
 
 tours_router = APIRouter()
 
 
+def serialize_tour(tour):
+    """Helper function to serialize a Tour object."""
+    return {
+        "tour_id": str(tour.tour_id),
+        "destination": tour.destination,
+        "duration": tour.duration,
+        "cost": tour.cost,
+        "transport": tour.transport,
+        "hotel": tour.hotel,
+        "description": tour.description,
+        "created_at": tour.created_at.isoformat() if isinstance(tour.created_at, datetime) else None,
+        "updated_at": tour.updated_at.isoformat() if isinstance(tour.updated_at, datetime) else None,
+    }
+
+
 @tours_router.get("/")
-def get_all_tours(db: Session = Depends(get_db)):
+async def get_all_tours(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     cache_key = "all_tours"
-    cached_data = redis_client.get(cache_key)
+    cached_data = await redis_client.get(cache_key)
     if cached_data:
-        return json.loads(cached_data)
+        return json.loads(cached_data.decode("utf-8"))
 
     repository = TourRepository(db)
-    tours = repository.get_all_tours()
-    result = [tour.__dict__ for tour in tours]
-    for item in result:
-        item.pop('_sa_instance_state', None)
-    redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
+    tours = await repository.get_all_tours()
+    result = [serialize_tour(tour) for tour in tours]
+    await redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
     return result
 
 
 @tours_router.get("/{tour_id}")
-def get_tour_by_id(tour_id: UUID, db: Session = Depends(get_db)):
+async def get_tour_by_id(
+    tour_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     cache_key = f"tour_{tour_id}"
-    cached_data = redis_client.get(cache_key)
+    cached_data = await redis_client.get(cache_key)
     if cached_data:
-        return json.loads(cached_data)
+        return json.loads(cached_data.decode("utf-8"))
 
     repository = TourRepository(db)
-    tour = repository.get_tour_by_id(tour_id)
+    tour = await repository.get_tour_by_id(tour_id)
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
 
-    result = tour.__dict__
-    result.pop('_sa_instance_state', None)
-    redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
+    result = serialize_tour(tour)
+    await redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
     return result
 
 
 @tours_router.post("/")
-def create_tour(tour_data: dict, db: Session = Depends(get_db)):
+async def create_tour(
+    tour_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = TourRepository(db)
-    new_tour = repository.create_tour(tour_data)
-    redis_client.delete("all_tours")  # Invalidate the cache for all tours
+    new_tour = await repository.create_tour(tour_data)
+    await redis_client.delete("all_tours")  # Invalidate the cache for all tours
     return new_tour
 
 
 @tours_router.put("/{tour_id}")
-def update_tour(tour_id: UUID, update_data: dict, db: Session = Depends(get_db)):
+async def update_tour(
+    tour_id: UUID,
+    update_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = TourRepository(db)
-    updated_tour = repository.update_tour(tour_id, update_data)
+    updated_tour = await repository.update_tour(tour_id, update_data)
     if not updated_tour:
         raise HTTPException(status_code=404, detail="Tour not found")
 
-    redis_client.delete("all_tours")
-    redis_client.delete(f"tour_{tour_id}")
+    await redis_client.delete("all_tours")
+    await redis_client.delete(f"tour_{tour_id}")
     return updated_tour
 
 
 @tours_router.delete("/{tour_id}")
-def delete_tour(tour_id: UUID, db: Session = Depends(get_db)):
+async def delete_tour(
+    tour_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = TourRepository(db)
-    deleted_tour = repository.delete_tour(tour_id)
+    deleted_tour = await repository.delete_tour(tour_id)
     if not deleted_tour:
         raise HTTPException(status_code=404, detail="Tour not found")
 
-    redis_client.delete("all_tours")
-    redis_client.delete(f"tour_{tour_id}")
+    await redis_client.delete("all_tours")
+    await redis_client.delete(f"tour_{tour_id}")
     return deleted_tour

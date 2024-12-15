@@ -1,63 +1,89 @@
 import json
 
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.database import get_db, redis_client
 from src.bookings.repo import BookingRepository
 from src.config import CACHE_EXPIRATION
-
+from src.auth.services import get_current_user
+from src.auth.models import User
 
 booking_router = APIRouter()
 
 
+def serialize_booking(booking):
+    """Helper function to serialize a Booking object."""
+    return {
+        "booking_id": str(booking.booking_id),
+        "client_id": str(booking.client_id),
+        "tour_id": str(booking.tour_id),
+        "status": booking.status,
+        "booking_date": booking.booking_date.isoformat() if isinstance(booking.booking_date, datetime) else None
+    }
+
+
 @booking_router.get("/")
-def get_all_bookings(db: Session = Depends(get_db)):
+async def get_all_bookings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     cache_key = "all_bookings"
-    cached_data = redis_client.get(cache_key)
+    cached_data = await redis_client.get(cache_key)
     if cached_data:
-        return json.loads(cached_data)
+        return json.loads(cached_data.decode("utf-8"))
 
     repository = BookingRepository(db)
-    bookings = repository.get_all_bookings()
-    result = [booking.__dict__ for booking in bookings]
-    for item in result:
-        item.pop('_sa_instance_state', None)
-    redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
+    bookings = await repository.get_all_bookings()
+    result = [serialize_booking(booking) for booking in bookings]
+    await redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
     return result
 
 
 @booking_router.get("/{booking_id}")
-def get_booking_by_id(booking_id: UUID, db: Session = Depends(get_db)):
+async def get_booking_by_id(
+    booking_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     cache_key = f"booking_{booking_id}"
-    cached_data = redis_client.get(cache_key)
+    cached_data = await redis_client.get(cache_key)
     if cached_data:
-        return json.loads(cached_data)
+        return json.loads(cached_data.decode("utf-8"))
 
     repository = BookingRepository(db)
-    booking = repository.get_booking_by_id(booking_id)
+    booking = await repository.get_booking_by_id(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    result = booking.__dict__
-    result.pop('_sa_instance_state', None)
-    redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
+    result = serialize_booking(booking)
+    await redis_client.setex(cache_key, CACHE_EXPIRATION, json.dumps(result))
     return result
 
 
 @booking_router.post("/")
-def create_booking(booking_data: dict, db: Session = Depends(get_db)):
+async def create_booking(
+    booking_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = BookingRepository(db)
-    new_booking = repository.create_booking(booking_data)
+    new_booking = await repository.create_booking(booking_data)
     redis_client.delete("all_bookings")  # Invalidate the cache for all bookings
     return new_booking
 
 
 @booking_router.put("/{booking_id}")
-def update_booking(booking_id: UUID, update_data: dict, db: Session = Depends(get_db)):
+async def update_booking(
+    booking_id: UUID,
+    update_data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = BookingRepository(db)
-    updated_booking = repository.update_booking(booking_id, update_data)
+    updated_booking = await repository.update_booking(booking_id, update_data)
     if not updated_booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
@@ -67,9 +93,13 @@ def update_booking(booking_id: UUID, update_data: dict, db: Session = Depends(ge
 
 
 @booking_router.delete("/{booking_id}")
-def delete_booking(booking_id: UUID, db: Session = Depends(get_db)):
+async def delete_booking(
+    booking_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     repository = BookingRepository(db)
-    deleted_booking = repository.delete_booking(booking_id)
+    deleted_booking = await repository.delete_booking(booking_id)
     if not deleted_booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
