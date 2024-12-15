@@ -70,6 +70,7 @@ async def create_booking(
     current_user: User = Depends(get_current_user)
 ):
     repository = BookingRepository(db)
+    booking_data["client_id"] = str(current_user.user_id)
     new_booking = await repository.create_booking(booking_data)
     redis_client.delete("all_bookings")  # Invalidate the cache for all bookings
     return new_booking
